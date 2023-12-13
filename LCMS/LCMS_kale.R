@@ -89,7 +89,7 @@ for(k in 1:ncol(sig_metabolite_data)) {
 }
 
 # Creating a data frame to store + visualize correlation coefficients
-metabolite_corr <- data.frame(sig_metabolite_names, phenotype_corr_values) 
+metabolite_corr <- data.frame(rownames(VIP_values_large), phenotype_corr_values) 
 
 # Base R plotting - test
 plot(sig_metabolite_data[,43], AC_merged$AC)
