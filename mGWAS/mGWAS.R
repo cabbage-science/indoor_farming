@@ -52,13 +52,42 @@ colnames(myGD) <- c("taxa",SNP)
 
 # Loading LCMS peak intensity data (phenotype - myY)
 sig_metabolite_intensities_genotyped <- read.csv("../data/significant_metabolite_peaks_genotyped.csv", header = TRUE)
+
+###############################
+#### mGWAS for ALL samples ####
+###############################
+
 # Choosing specific metabolites to include in myY
 myY <- sig_metabolite_intensities_genotyped %>%
   select(1,2)
 
-###############
-#### mGWAS ####
-###############
+myGAPIT <- GAPIT(
+  Y=myY,
+  GD=myGD,
+  GM=myGM,
+  PCA.total=5,
+  model="GLM"
+)
+
+#############################################
+#### mGWAS for group 1 samples (n = 311) ####
+#############################################
+
+# IMPORTANT: Please run all codes "LOADING FILES" first
+grp1_sample_ids <- read.csv("../data/grp1_sample_ids.csv", header = TRUE)
+
+# Creating myY. Remember to load in metabolite data from above
+myY <- sig_metabolite_intensities_genotyped %>%
+  # Filtering for grp1 samples only
+  semi_join(grp1_sample_ids, by = "Sample_ID") %>%
+  # Select specific metabolites 
+  select(1,2)
+
+# Creating a myGD for group 1. myGM would be the same.
+myGD <- myGD %>%
+  # Filtering for grp1 samples only
+  semi_join(grp1_sample_ids, by = c("taxa" = "Sample_ID"))
+
 myGAPIT <- GAPIT(
   Y=myY,
   GD=myGD,
