@@ -4,9 +4,10 @@
 
 getwd()
 library(caret) #5 fold cross validation for different models
+library(mixOmics) #select function from tidyverse will not work after this library is activated
 library(tidyverse) 
 library(readxl)
-library(pls)
+#library(pls)
 
 ####################################
 #### LOADING AND PREPARING DATA ####
@@ -17,7 +18,7 @@ metabolites <- read.csv("data/kale_compound_ids_mzrt.csv", header = TRUE)
 
 # Loading antioxidant capacity phenotype data (ABTS)
 df2 <- read_excel("data/kale_ABTS_data.xlsx", col_names = TRUE)
-# Removing repeated samples
+# Removing repeated sample IDs
 AC_values <- df2[!duplicated(df2$Sample_ID),]
 
 # Loading LCMS peak data (unscaled, with some sample repeats)
@@ -32,44 +33,28 @@ df1 <- read.csv("data/kale_peaks_noQC.csv", header = TRUE) %>%
   semi_join(AC_values, by = "Sample_ID")
 
 # Removing repeated samples
-kale_peaks_unscaled <- df1[!duplicated(df1$Sample_ID),]
+kale_peaks_scaled <- df1[!duplicated(df1$Sample_ID),]
 
 # Creating temporary data frames
-kale_ids <- kale_peaks_unscaled %>% select(1)
-kale_peaks_unscaled_peaks <- kale_peaks_unscaled %>% select(-1)
-
-# Creating pareto scaling function
-paretoscale <- function(data) {
-  x <- data
-  x.centered <- apply(x, 2, function(x) x - mean(x))
-  x.sc <- data.frame(apply(x.centered, 2, function(x) x/sqrt(sd(x))))
-  return(x.sc)
-}
-
-# Applying pareto scaling function on unscaled peak intensities
-kale_peaks_scaled_peaks <- paretoscale(kale_peaks_unscaled_peaks)
-
-# Re-creating the original dataframe, but scaled
-kale_peaks_scaled <- cbind(kale_ids, kale_peaks_scaled_peaks)
+kale_ids <- kale_peaks_scaled %>% select(1)
 
 # Clearing environment
-rm(df1, df2, kale_peaks_unscaled_peaks, kale_peaks_scaled_peaks, kale_peaks_unscaled)
+rm(df1, df2)
 
 #######################################
 #### PLS MODELLING AND VIP SCORING ####
 #######################################
 
 # Merging the phenotype df and LCMS df, to include only samples that undergone LCMS
-merged_df <- right_join(AC_values, kale_peaks_scaled, by = "Sample_ID") %>%
-  # Removing Sample ID column
-  select(-1)
+AC_merged <- left_join(kale_peaks_scaled, AC_values, by = "Sample_ID") %>%
+  # Selecting only the phenotype column(s)
+  select("AC")
 
 # Removing sample IDs for kale_peaks_scaled df
 kale_peaks_scaled_noid <- select(kale_peaks_scaled, -1)
 
 # Running PLS model and calculating VIP scores for each metabolite
-library(mixOmics) #select function from tidyverse will not work after this library is activated
-PLS_model <- pls(kale_peaks_scaled_noid, merged_df$AC)
+PLS_model <- pls(kale_peaks_scaled_noid, AC_merged)
 VIP_values <- vip(PLS_model)
 
 # Remember to check off the mixomics package here!!!
@@ -85,4 +70,41 @@ metabolite_info <- data.frame(rownames(VIP_values_large)) %>%
   mutate(metabolite_ID = as.integer(str_replace(metabolite_ID, "align_", ""))) %>%
   # Extracting information from metabolite information data frame
   left_join(metabolites, by = c("metabolite_ID" = "Alignment.ID"))
+
+rm(PLS_model, VIP_values, AC_values)
+
+#######################################################
+#### LINEAR REGRESSION OF PEAK DATA WITH PHENOTYPE ####
+#######################################################
+
+# Selecting peak intensity data of significant metabolites, by extracting names of metabolites
+sig_metabolite_data <- kale_peaks_scaled_noid[,rownames(VIP_values_large)]
+
+# Initializing empty vector
+phenotype_corr_values <- NULL
+
+# Calculating the phenotypic correlation with peak intensity for each of the significant metabolites
+for(k in 1:ncol(sig_metabolite_data)) {
+  phenotype_corr_values <- c(phenotype_corr_values, cor(AC_merged, sig_metabolite_data[,k]))
+}
+
+# Creating a data frame to store + visualize correlation coefficients
+metabolite_corr <- data.frame(sig_metabolite_names, phenotype_corr_values) 
+
+# Base R plotting - test
+plot(sig_metabolite_data[,43], AC_merged$AC)
+
+# Combining kale IDs andsignificant metabolite peak intensities into single df for export - downstream GWAS phenotype file
+sig_metabolites <- cbind(kale_ids, sig_metabolite_data)
+# Writing csv file
+write.csv(sig_metabolites, file = "significant_metabolite_peaks.csv", quote = FALSE, row.names = FALSE)
+
+##########################################################
+#### GGPLOT2 FOR PHENOTYPIC CORRELATION VISUALIZATION ####
+##########################################################
+
+# Combining phenotype and significant metabolite peak intensities into single df for ggplot
+combined_df <- cbind(AC_merged, sig_metabolite_data)
+
+
 
