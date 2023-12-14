@@ -2,11 +2,11 @@
 #### LOADING PACKAGES AND SOURCE CODES ####
 ###########################################
 
-library(tidyverse)
 library(data.table)
 library(readxl)
 source("http://zzlab.net/GAPIT/GAPIT.library.R")
 source("http://zzlab.net/GAPIT/gapit_functions.txt")
+library(tidyverse)
 
 ##################################################
 #### CONVERTING HAPMAP DIPLOID INTO NUMERICAL ####
@@ -53,13 +53,15 @@ colnames(myGD) <- c("taxa",SNP)
 # Loading LCMS peak intensity data (phenotype - myY)
 sig_metabolite_intensities_genotyped <- read.csv("../data/significant_metabolite_peaks_genotyped.csv", header = TRUE)
 
+# Loading PCA data
+myCV <- data.frame(fread("../PCA/kale_371_LCMS_eigenvectors.txt", header = TRUE))
+
 ###############################
 #### mGWAS for ALL samples ####
 ###############################
 
 # Choosing specific metabolites to include in myY
-myY <- sig_metabolite_intensities_genotyped %>%
-  select(1,2)
+myY <- sig_metabolite_intensities_genotyped[,c(1,2)]
 
 myGAPIT <- GAPIT(
   Y=myY,
@@ -92,6 +94,6 @@ myGAPIT <- GAPIT(
   Y=myY,
   GD=myGD,
   GM=myGM,
-  PCA.total=5,
+  CV=myCV,
   model="GLM"
 )
