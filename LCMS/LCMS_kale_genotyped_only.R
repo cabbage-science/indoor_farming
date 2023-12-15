@@ -7,6 +7,7 @@ library(caret) #5 fold cross validation for different models
 library(mixOmics) #select function from tidyverse will not work after this library is activated
 library(tidyverse) 
 library(readxl)
+library(ggplot2)
 #library(pls)
 
 ####################################
@@ -25,7 +26,7 @@ df2 <- read_excel("data/kale_ABTS_data.xlsx", col_names = TRUE)
 AC_values <- df2[!duplicated(df2$Sample_ID),]
 
 # Loading LCMS peak data (unscaled, with some sample repeats)
-df1 <- read.csv("data/kale_peaks_noQC.csv", header = TRUE) %>%
+df1 <- read.csv("data/kale_peaks_log2_noQC.csv", header = TRUE) %>%
   # Removing redundant columns
   select(-(1:5)) %>%
   # Rename column
@@ -36,10 +37,10 @@ df1 <- read.csv("data/kale_peaks_noQC.csv", header = TRUE) %>%
   semi_join(samples_all_3, by = "Sample_ID")
 
 # Removing repeated samples
-kale_peaks_scaled <- df1[!duplicated(df1$Sample_ID),]
+kale_peaks_unscaled <- df1[!duplicated(df1$Sample_ID),]
 
 # Creating temporary data frames
-kale_ids <- kale_peaks_scaled %>% select(1)
+kale_ids <- kale_peaks_unscaled %>% select(1)
 
 # Clearing environment
 rm(df1, df2)
@@ -49,12 +50,24 @@ rm(df1, df2)
 #######################################
 
 # Merging the phenotype df and LCMS df, to include only samples that undergone LCMS
-AC_merged <- left_join(kale_peaks_scaled, AC_values, by = "Sample_ID") %>%
+AC_merged <- left_join(kale_peaks_unscaled, AC_values, by = "Sample_ID") %>%
   # Selecting only the phenotype column(s)
   select("AC")
 
 # Removing sample IDs for kale_peaks_scaled df
-kale_peaks_scaled_noid <- select(kale_peaks_scaled, -1)
+kale_peaks_unscaled_noid <- select(kale_peaks_unscaled, -1)
+
+# Pareto scaling the log2 peak intensities for further normalization
+paretoscale <- function(data) {
+  x <- data
+  x.centered <- apply(x, 2, function(x) x - mean(x))
+  x.sc <- data.frame(apply(x.centered, 2, function(x) x/sqrt(sd(x))))
+  x.sc[is.na(x.sc)] <- 0
+  return(x.sc)
+}
+
+# Applying pareto scale function onto unscaled data and creating a new object
+kale_peaks_scaled_noid <- paretoscale(kale_peaks_unscaled_noid) 
 
 # Running PLS model and calculating VIP scores for each metabolite
 PLS_model <- pls(kale_peaks_scaled_noid, AC_merged)
@@ -100,7 +113,9 @@ plot(sig_metabolite_data[,1], AC_merged$AC)
 # Combining kale IDs andsignificant metabolite peak intensities into single df for export - downstream GWAS phenotype file
 sig_metabolites_genotyped <- cbind(kale_ids, sig_metabolite_data)
 # Writing csv file
-write.csv(sig_metabolites_genotyped, file = "significant_metabolite_peaks_genotyped.csv", quote = FALSE, row.names = FALSE)
+#write.csv(sig_metabolites_genotyped, file = "significant_metabolite_peaks_genotyped.csv", quote = FALSE, row.names = FALSE)
+write.csv(sig_metabolites_genotyped, file = "significant_metabolite_peaks_genotyped_log2.csv", quote = FALSE, row.names = FALSE)
+
 
 ##########################################################
 #### GGPLOT2 FOR PHENOTYPIC CORRELATION VISUALIZATION ####
@@ -108,6 +123,3 @@ write.csv(sig_metabolites_genotyped, file = "significant_metabolite_peaks_genoty
 
 # Combining phenotype and significant metabolite peak intensities into single df for ggplot
 combined_df <- cbind(AC_merged, sig_metabolite_data)
-
-
-
