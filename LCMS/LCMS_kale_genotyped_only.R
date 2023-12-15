@@ -107,15 +107,13 @@ for(k in 1:ncol(sig_metabolite_data)) {
 # Creating a data frame to store + visualize correlation coefficients
 metabolite_corr <- data.frame(rownames(VIP_values_large), phenotype_corr_values) 
 
-# Base R plotting - test
-plot(sig_metabolite_data[,1], AC_merged$AC)
-
 # Combining kale IDs andsignificant metabolite peak intensities into single df for export - downstream GWAS phenotype file
 sig_metabolites_genotyped <- cbind(kale_ids, sig_metabolite_data)
-# Writing csv file
+
+# Writing significant metabolite peak intensity data csv file
 #write.csv(sig_metabolites_genotyped, file = "significant_metabolite_peaks_genotyped.csv", quote = FALSE, row.names = FALSE)
 write.csv(sig_metabolites_genotyped, file = "significant_metabolite_peaks_genotyped_log2.csv", quote = FALSE, row.names = FALSE)
-
+write.csv(metabolite_corr, file = "significant_metabolite_correlation.csv", quote = FALSE, row.names = FALSE)
 
 ##########################################################
 #### GGPLOT2 FOR PHENOTYPIC CORRELATION VISUALIZATION ####
