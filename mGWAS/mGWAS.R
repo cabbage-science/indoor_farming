@@ -2,6 +2,7 @@
 #### LOADING PACKAGES AND SOURCE CODES ####
 ###########################################
 
+getwd()
 library(data.table)
 library(readxl)
 source("http://zzlab.net/GAPIT/GAPIT.library.R")
@@ -18,8 +19,8 @@ myG_ <- data.frame(fread("../data/mdp_genotype_test.hmp.txt", head=FALSE))
 # Loading in hapmap diploid data
 myG <- data.frame(fread("../data/kale_371_sequenced_LCMS.hmp.txt", head = FALSE))
 # Ensuring consistency with test data
-lmao <- as.vector(as.matrix(myG_[1,1:11]))
-myG[1,1:11] <- lmao
+temp_names <- as.vector(as.matrix(myG_[1,1:11]))
+myG[1,1:11] <- temp_names
 # Conversion, and output a numerical txt file
 myGAPIT <- GAPIT(G=myG, output.numerical=TRUE)
 
@@ -51,7 +52,8 @@ myGD$taxa <- sample_ids$Sample_ID
 colnames(myGD) <- c("taxa",SNP)
 
 # Loading LCMS peak intensity data (phenotype - myY)
-sig_metabolite_intensities_genotyped <- read.csv("../data/significant_metabolite_peaks_genotyped.csv", header = TRUE)
+#sig_metabolite_intensities_genotyped <- read.csv("../data/significant_metabolite_peaks_genotyped.csv", header = TRUE)
+sig_metabolite_intensities_genotyped <- read.csv("../data/significant_metabolite_peaks_genotyped_log2.csv", header = TRUE)
 
 # Loading PCA data
 myCV <- data.frame(fread("../PCA/kale_371_LCMS_eigenvectors.txt", header = TRUE))
@@ -67,7 +69,7 @@ myGAPIT <- GAPIT(
   Y=myY,
   GD=myGD,
   GM=myGM,
-  PCA.total=5,
+  CV=myCV,
   model="GLM"
 )
 
