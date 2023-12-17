@@ -105,7 +105,8 @@ for(k in 1:ncol(sig_metabolite_data)) {
 }
 
 # Creating a data frame to store + visualize correlation coefficients
-metabolite_corr <- data.frame(rownames(VIP_values_large), phenotype_corr_values) 
+metabolite_corr <- data.frame(rownames(VIP_values_large), phenotype_corr_values) %>%
+  rename("metabolite_ID" = "rownames.VIP_values_large.")
 
 # Combining kale IDs andsignificant metabolite peak intensities into single df for export - downstream GWAS phenotype file
 sig_metabolites_genotyped <- cbind(kale_ids, sig_metabolite_data)
@@ -124,10 +125,15 @@ write.csv(metabolite_info_export, file = "significant_metabolite_info.csv", quot
 #### GGPLOT2 FOR PHENOTYPIC CORRELATION VISUALIZATION ####
 ##########################################################
 
+# Removing objects to clear environment just for visualization
+rm(kale_ids, kale_peaks_scaled_noid, kale_peaks_unscaled, kale_peaks_unscaled_noid, metabolites, samples_all_3, VIP_values_large, sig_metabolites_genotyped)
+
 # Creating a metabolite names vector for convenience
 metabolite_names <- colnames(sig_metabolite_data)
 # !!!! Just need to change this depending on which metabolite to plot !!!!
-temp_met_name <- metabolite_names[1]
+temp_met_name <- metabolite_names[69]
+
+# After changing the temp_met_name, run the 2 commands below for plotting
 
 # Combining phenotype and significant metabolite peak intensities into single df for ggplot
 combined_df <- cbind(AC_merged, sig_metabolite_data[,temp_met_name]) %>%
@@ -144,4 +150,42 @@ ggplot(data = combined_df, aes(x = x, y = AC)) +
         axis.title.y = element_text(margin = margin(r = 20)),
         axis.title.x = element_text(margin = margin(t = 20)),
         axis.title = element_text(size = 14),              
-        axis.text = element_text(size = 10)) + ylim(0,180)
+        axis.text = element_text(size = 10)) + ylim(0,180) +
+  annotate("text", x = -Inf, y = -Inf, 
+           # Extracting correlation coefficient
+           label = paste0("R = ",round(metabolite_corr[metabolite_corr$metabolite_ID == temp_met_name,2],3)), 
+           hjust = -0.1, vjust = -1, color = "black", size = 8)
+
+
+##########################################################
+#### Writing for loop for automation - temporary code ####
+##########################################################
+
+#setwd("C:/Users/ETHAN/OneDrive/Documents/MR_B_BY/NUS/INDOOR_FARMING/LC-MS/phenotypic_correlation_images")
+#getwd()
+
+for (k in 1:ncol(sig_metabolite_data)) {
+  temp_met_name <- metabolite_names[k]
+  combined_df <- cbind(AC_merged, sig_metabolite_data[,temp_met_name]) %>%
+    rename("x" = "sig_metabolite_data[, temp_met_name]")
+  p <- ggplot(data = combined_df, aes(x = x, y = AC)) +
+    theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+          axis.title.y = element_text(margin = margin(r = 20)),
+          axis.title.x = element_text(margin = margin(t = 20)),
+          axis.title = element_text(size = 14),              
+          axis.text = element_text(size = 10),
+          panel.grid.major = element_line(color = "lightgray", linewidth = 0.3),
+          panel.grid.minor = element_line(color = "lightgray", linewidth = 0.3),
+          panel.background = element_rect(fill = "white")) + 
+    geom_smooth(method = "lm", se = FALSE, color = "red",alpha = 0.7, lty = "dotted") +
+    geom_point(shape = 21, size = 3, color = "black") +
+    labs(title = paste0("Relationship between metabolite ID ", temp_met_name, " and antioxidant capacity"), 
+         x = "Peak intensity (log2 and pareto scaled)", 
+         y = "ABTS Antioxidant capacity (µmol TE/g)") +
+    ylim(0,180) +
+    annotate("text", x = -Inf, y = -Inf, 
+             # Extracting correlation coefficient
+             label = paste0("R = ",round(metabolite_corr[metabolite_corr$metabolite_ID == temp_met_name,2],3)), 
+             hjust = -0.4, vjust = -2, color = "black", size = 8)
+  ggsave(paste0(temp_met_name,"_phenotypic_correlation.png"), plot = p, width = 10, height = 8, dpi = 800)
+}
