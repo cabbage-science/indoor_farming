@@ -124,5 +124,24 @@ write.csv(metabolite_info_export, file = "significant_metabolite_info.csv", quot
 #### GGPLOT2 FOR PHENOTYPIC CORRELATION VISUALIZATION ####
 ##########################################################
 
+# Creating a metabolite names vector for convenience
+metabolite_names <- colnames(sig_metabolite_data)
+# !!!! Just need to change this depending on which metabolite to plot !!!!
+temp_met_name <- metabolite_names[1]
+
 # Combining phenotype and significant metabolite peak intensities into single df for ggplot
-combined_df <- cbind(AC_merged, sig_metabolite_data)
+combined_df <- cbind(AC_merged, sig_metabolite_data[,temp_met_name]) %>%
+  rename("x" = "sig_metabolite_data[, temp_met_name]")
+
+ggplot(data = combined_df, aes(x = x, y = AC)) +
+  geom_smooth(method = "lm", se = FALSE, color = "red",alpha = 0.7, lty = "dotted") +
+  geom_point(shape = 21, size = 3, color = "black") +
+  theme_minimal() +
+  labs(title = paste0("Relationship between metabolite ID ", temp_met_name, " and antioxidant capacity"), 
+       x = "Peak intensity (log2 and pareto scaled)", 
+       y = "ABTS Antioxidant capacity (µmol TE/g)") +
+  theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+        axis.title.y = element_text(margin = margin(r = 20)),
+        axis.title.x = element_text(margin = margin(t = 20)),
+        axis.title = element_text(size = 14),              
+        axis.text = element_text(size = 10)) + ylim(0,180)
