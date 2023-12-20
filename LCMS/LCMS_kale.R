@@ -7,6 +7,7 @@ library(caret) #5 fold cross validation for different models
 library(mixOmics) #select function from tidyverse will not work after this library is activated
 library(tidyverse) 
 library(readxl)
+library(ggplot2)
 #library(pls)
 
 ####################################
@@ -22,7 +23,7 @@ df2 <- read_excel("data/kale_ABTS_data.xlsx", col_names = TRUE)
 AC_values <- df2[!duplicated(df2$Sample_ID),]
 
 # Loading LCMS peak data (unscaled, with some sample repeats)
-df1 <- read.csv("data/kale_peaks_noQC.csv", header = TRUE) %>%
+df1 <- read.csv("data/kale_peaks_log2_noQC.csv", header = TRUE) %>%
   # Removing redundant columns
   select(-(1:5)) %>%
   # Rename column
@@ -91,13 +92,16 @@ for(k in 1:ncol(sig_metabolite_data)) {
 # Creating a data frame to store + visualize correlation coefficients
 metabolite_corr <- data.frame(rownames(VIP_values_large), phenotype_corr_values) 
 
-# Base R plotting - test
-plot(sig_metabolite_data[,43], AC_merged$AC)
-
 # Combining kale IDs andsignificant metabolite peak intensities into single df for export - downstream GWAS phenotype file
 sig_metabolites <- cbind(kale_ids, sig_metabolite_data)
 # Writing csv file
-write.csv(sig_metabolites, file = "significant_metabolite_peaks.csv", quote = FALSE, row.names = FALSE)
+write.csv(sig_metabolites, file = "significant_metabolite_peaks_log2.csv", quote = FALSE, row.names = FALSE)
+write.csv(metabolite_corr, file = "significant_metabolite_correlation.csv", quote = FALSE, row.names = FALSE)
+
+# Writing metabolite information file
+metabolite_info_export <- metabolite_info %>%
+  mutate(metabolite_ID = str_c("align_", metabolite_ID))
+write.csv(metabolite_info_export, file = "significant_metabolite_info.csv", quote = FALSE, row.names = FALSE)
 
 ##########################################################
 #### GGPLOT2 FOR PHENOTYPIC CORRELATION VISUALIZATION ####
@@ -107,4 +111,40 @@ write.csv(sig_metabolites, file = "significant_metabolite_peaks.csv", quote = FA
 combined_df <- cbind(AC_merged, sig_metabolite_data)
 
 
+##########################################################
+#### GGPLOT2 FOR PHENOTYPIC CORRELATION VISUALIZATION ####
+##########################################################
 
+# Removing objects to clear environment just for visualization
+rm(kale_ids, kale_peaks_scaled_noid, kale_peaks_scaled, metabolites, VIP_values_large, sig_metabolites)
+
+# Creating a metabolite names vector for convenience
+metabolite_names <- colnames(sig_metabolite_data)
+
+#setwd("C:/Users/ETHAN/OneDrive/Documents/MR_B_BY/NUS/INDOOR_FARMING/LC-MS/phenotypic_correlation_new")
+
+for (k in 1:ncol(sig_metabolite_data)) {
+  temp_met_name <- metabolite_names[k]
+  combined_df <- cbind(AC_merged, sig_metabolite_data[,temp_met_name]) %>%
+    rename("x" = "sig_metabolite_data[, temp_met_name]")
+  p <- ggplot(data = combined_df, aes(x = x, y = AC)) +
+    theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+          axis.title.y = element_text(margin = margin(r = 20)),
+          axis.title.x = element_text(margin = margin(t = 20)),
+          axis.title = element_text(size = 14),              
+          axis.text = element_text(size = 10),
+          panel.grid.major = element_line(color = "lightgray", linewidth = 0.3),
+          panel.grid.minor = element_line(color = "lightgray", linewidth = 0.3),
+          panel.background = element_rect(fill = "white")) + 
+    geom_smooth(method = "lm", se = FALSE, color = "red",alpha = 0.7, lty = "dotted") +
+    geom_point(shape = 21, size = 3, color = "black") +
+    labs(title = paste0("Relationship between metabolite ID ", temp_met_name, " and antioxidant capacity"), 
+         x = "Peak intensity (log2 and pareto scaled)", 
+         y = "ABTS Antioxidant capacity (µmol TE/g)") +
+    ylim(0,180) +
+    annotate("text", x = -Inf, y = -Inf, 
+             # Extracting correlation coefficient
+             label = paste0("R = ",round(metabolite_corr$phenotype_corr_values[k],3)), 
+             hjust = -0.4, vjust = -2, color = "black", size = 8)
+  ggsave(paste0(temp_met_name,"_phenotypic_correlation.png"), plot = p, width = 10, height = 8, dpi = 800)
+}
