@@ -2,7 +2,6 @@
 #### LOADING PACKAGES AND SOURCE CODES ####
 ###########################################
 
-getwd()
 library(data.table)
 library(readxl)
 source("http://zzlab.net/GAPIT/GAPIT.library.R")
@@ -53,7 +52,8 @@ colnames(myGD) <- c("taxa",SNP)
 
 # Loading LCMS peak intensity data (phenotype - myY)
 #sig_metabolite_intensities_genotyped <- read.csv("../data/significant_metabolite_peaks_genotyped.csv", header = TRUE)
-sig_metabolite_intensities_genotyped <- read.csv("../data/significant_metabolite_peaks_genotyped_log2.csv", header = TRUE)
+#sig_metabolite_intensities_genotyped <- read.csv("../data/significant_metabolite_peaks_genotyped_log2.csv", header = TRUE)
+sig_metabolite_intensities <- read.csv("../data/significant_metabolite_peaks_log2.csv", header = TRUE)
 
 # Loading PCA data
 myCV <- data.frame(fread("../PCA/kale_371_LCMS_eigenvectors.txt", header = TRUE))
@@ -81,11 +81,11 @@ myGAPIT <- GAPIT(
 grp1_sample_ids <- read.csv("../data/grp1_sample_ids.csv", header = TRUE)
 
 # Creating myY. Remember to load in metabolite data from above
-myY <- sig_metabolite_intensities_genotyped %>%
+myY <- sig_metabolite_intensities %>%
   # Filtering for grp1 samples only
   semi_join(grp1_sample_ids, by = "Sample_ID") %>%
   # Select specific metabolites 
-  select(1,2)
+  select(1,2:20)
 
 # Creating a myGD for group 1. myGM would be the same.
 myGD <- myGD %>%
