@@ -3,7 +3,6 @@
 ###########################
 
 getwd()
-library(caret) #5 fold cross validation for different models
 library(mixOmics) #select function from tidyverse will not work after this library is activated
 library(tidyverse) 
 library(readxl)
@@ -58,12 +57,15 @@ kale_peaks_scaled_noid <- select(kale_peaks_scaled, -1)
 PLS_model <- pls(kale_peaks_scaled_noid, AC_merged)
 VIP_values <- vip(PLS_model)
 
-# Remember to check off the mixomics package here!!!
 # Filtering for metabolites with VIP scores more than 2
 VIP_values_large <- data.frame(VIP_values) %>% 
   filter(comp1 >= 2)
 
-# Creating a data frame of metabolite_IDs with VIP more than 2
+# Filtering for metabolites with VIP scores more than 1.5
+#VIP_values_large <- data.frame(VIP_values) %>% 
+#  filter(comp1 >= 1.5)
+
+# Creating a data frame of metabolite_IDs with VIP more than threshold specified
 metabolite_info <- data.frame(rownames(VIP_values_large)) %>%
   # Renaming rows for easier reference downstream
   rename(metabolite_ID = rownames.VIP_values_large.) %>%
@@ -92,8 +94,12 @@ for(k in 1:ncol(sig_metabolite_data)) {
 # Creating a data frame to store + visualize correlation coefficients
 metabolite_corr <- data.frame(rownames(VIP_values_large), phenotype_corr_values) 
 
+# Extract only metabolites with correlation > 0, with antioxidant capacity 
+#metabolite_corr <- filter(metabolite_corr, phenotype_corr_values >= 0) ; sig_metabolite_data <- kale_peaks_scaled_noid[,metabolite_corr$rownames.VIP_values_large.]
+
 # Combining kale IDs andsignificant metabolite peak intensities into single df for export - downstream GWAS phenotype file
 sig_metabolites <- cbind(kale_ids, sig_metabolite_data)
+
 # Writing csv file
 write.csv(sig_metabolites, file = "significant_metabolite_peaks_log2.csv", quote = FALSE, row.names = FALSE)
 write.csv(metabolite_corr, file = "significant_metabolite_correlation.csv", quote = FALSE, row.names = FALSE)
@@ -102,6 +108,7 @@ write.csv(metabolite_corr, file = "significant_metabolite_correlation.csv", quot
 metabolite_info_export <- metabolite_info %>%
   mutate(metabolite_ID = str_c("align_", metabolite_ID))
 write.csv(metabolite_info_export, file = "significant_metabolite_info.csv", quote = FALSE, row.names = FALSE)
+
 
 ##########################################################
 #### GGPLOT2 FOR PHENOTYPIC CORRELATION VISUALIZATION ####
