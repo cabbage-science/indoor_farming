@@ -145,7 +145,7 @@ for (k in 2:ncol(sig_metabolite_peaks)) {
   p <- ggplot(actual_predicted, aes(x=pred, y=obs)) + 
     geom_abline(intercept=0, slope=1, colour = "red") +
     geom_point(shape = 21, colour = "black", size = 2, stroke = 1) +
-    labs(x='Predicted Brix Values', y='Observed Brix Values',
+    labs(x='Predicted Antioxidant capacity Values', y='Observed Antioxidant capacity Values',
          title = paste0("Prediction for ",phenotype," using ",k," metabolites (",predict_model," model)"),
          subtitle = "Metabolites used for prediction were arranged in decreasing VIP score",
          caption = "Red line indicates the expected linear relationship between observed and predicted values") +
@@ -283,7 +283,7 @@ for (k in 2:ncol(sig_metabolite_peaks_removed)) {
   p <- ggplot(actual_predicted, aes(x=pred, y=obs)) + 
     geom_abline(intercept=0, slope=1, colour = "red") +
     geom_point(shape = 21, colour = "black", size = 2, stroke = 1) +
-    labs(x='Predicted Brix Values', y='Observed Brix Values',
+    labs(x='Predicted Antioxidant capacity Values', y='Observed Antioxidant capacity Values',
          title = paste0("Prediction for ",phenotype," using ",k," metabolites (",predict_model," model)"),
          subtitle = "Metabolites used for prediction were arranged in decreasing VIP score",
          caption = "Red line indicates the expected linear relationship between observed and predicted values") +
@@ -355,7 +355,7 @@ actual_predicted <- data.frame(extractPrediction(bothModels, testX = merged_df_n
 p <- ggplot(actual_predicted, aes(x=pred, y=obs)) + 
   geom_abline(intercept=0, slope=1, colour = "red") +
   geom_point(shape = 21, colour = "black", size = 2, stroke = 1) +
-  labs(x='Predicted Brix Values', y='Observed Brix Values',
+  labs(x='Predicted Antioxidant capacity Values', y='Observed Antioxidant capacity Values',
        title = paste0("Prediction for ",phenotype," (",predict_model," model)"),
        subtitle = "Optimal number of negatively correlated (n = 6) and positively correlated (n = 4) metabolites were used",
        caption = "Red line indicates the expected linear relationship between observed and predicted values") +
