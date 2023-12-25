@@ -48,7 +48,7 @@ ggplot(correlation_long_symmetric, aes(x = metabolite_ID1, y = metabolite_ID2, f
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 
-# Removing correlated metabolites - checking. Removal done manually
+# Removing correlated metabolites - checking. Removal done manually. Refer to section below
 
 #####################################################
 #### LASSO - 5 FOLD CROSS VALIDATION USING CARET ####
@@ -318,6 +318,10 @@ plot(No_of_metabolites, R2_values)
 #### TOGETHER WITH POSITIVELY CORRELATED METABOLITES ####
 #########################################################
 
+# Only run this if you want to keep optimal number of metabolites
+sig_metabolite_peaks_removed <- sig_metabolite_peaks_removed %>%
+  select(1:7)
+
 # Two of the positively correlated metabolites are highly correlated (27373 and 27380)
 # Can consider removing one of them during prediction
 
@@ -328,7 +332,7 @@ positively_correlated_metabolites <- read.csv("data/positively_correlated_metabo
 merged_df_new <- cbind(AC_merged, sig_metabolite_peaks_removed, positively_correlated_metabolites)
 
 # Set parameters for model training. Number = n-fold cross validation
-repeats = 1 ; number = 5
+repeats = 100 ; number = 5
 # For randomness. Can add a "#" in front for reproducibility
 seeds <- sample(1:10000000, size = (repeats*number) + 1, replace = FALSE)
 
@@ -348,13 +352,29 @@ bothModels <- list(lasso = modelLASSO)
 # Creating a df of actual and predicted values from the model above
 actual_predicted <- data.frame(extractPrediction(bothModels, testX = merged_df_new[,-1]))
 
-ggplot(actual_predicted, aes(x=pred, y=obs)) + 
-  geom_point(shape = 21, colour = "black", size = 2, stroke = 1) +
+p <- ggplot(actual_predicted, aes(x=pred, y=obs)) + 
   geom_abline(intercept=0, slope=1, colour = "red") +
-  labs(x='Predicted Brix Values', y='Actual Brix Values') +
-  theme_minimal() +
-  theme(text=element_text(size=20))
+  geom_point(shape = 21, colour = "black", size = 2, stroke = 1) +
+  labs(x='Predicted Brix Values', y='Observed Brix Values',
+       title = paste0("Prediction for ",phenotype," (",predict_model," model)"),
+       subtitle = "Optimal number of negatively correlated (n = 6) and positively correlated (n = 4) metabolites were used",
+       caption = "Red line indicates the expected linear relationship between observed and predicted values") +
+  theme(plot.title = element_text(size = 18, face = "bold"),
+        plot.caption = element_text(size = 10),
+        plot.subtitle = element_text(size = 11),
+        axis.title.y = element_text(margin = margin(r = 20)),
+        axis.title.x = element_text(margin = margin(t = 20)),
+        axis.title = element_text(size = 14),              
+        axis.text = element_text(size = 10),
+        panel.grid.major = element_line(color = "lightgray", linewidth = 0.3),
+        panel.grid.minor = element_line(color = "lightgray", linewidth = 0.3),
+        panel.background = element_rect(fill = "white")) +
+  theme(text=element_text(size=20)) +
+  annotate("text", x = Inf, y = -Inf, 
+           # Extracting correlation coefficient
+           label = bquote("R"^2 == .(round(mean(modelLASSO$resample$Rsquared),3))), 
+           hjust = 1.4, vjust = -1.5, color = "black", size = 7)
+ggsave("positive_and_optimal_metabolites_AC.png", plot = p, width = 10, height = 7, dpi = 600)
 
 # Calculate average R squared value from the model (k repeats and n folds)
 mean(modelLASSO$resample$Rsquared)
-# Accuracy seems to have improved slightly
