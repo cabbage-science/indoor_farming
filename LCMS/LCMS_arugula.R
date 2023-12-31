@@ -108,8 +108,7 @@ write.csv(sig_metabolites, file = "significant_metabolite_peaks_log2_arugula.csv
 write.csv(metabolite_corr, file = "significant_metabolite_correlation_arugula.csv", quote = FALSE, row.names = FALSE)
 
 # Writing metabolite information file
-metabolite_info_export <- metabolite_info %>%
-  mutate(metabolite_ID = str_c("align_", metabolite_ID))
+metabolite_info_export <- metabolite_info
 write.csv(metabolite_info_export, file = "significant_metabolite_info_arugula.csv", quote = FALSE, row.names = FALSE)
 
 
@@ -126,7 +125,7 @@ combined_df <- cbind(AC_merged, sig_metabolite_data)
 ##########################################################
 
 # Removing objects to clear environment just for visualization
-rm(kale_ids, arugula_peaks_scaled_noid, arugula_peaks_scaled, metabolites, VIP_values_large, sig_metabolites)
+rm(arugula_ids, arugula_peaks_scaled_noid, arugula_peaks_scaled, metabolites, VIP_values_large, sig_metabolites)
 
 # Creating a metabolite names vector for convenience
 metabolite_names <- colnames(sig_metabolite_data)
@@ -148,7 +147,7 @@ for (k in 1:ncol(sig_metabolite_data)) {
           panel.background = element_rect(fill = "white")) + 
     geom_smooth(method = "lm", se = FALSE, color = "red",alpha = 0.7, lty = "dotted") +
     geom_point(shape = 21, size = 3, color = "black") +
-    labs(title = paste0("Relationship between metabolite ID ", temp_met_name, " and antioxidant capacity"), 
+    labs(title = paste0("Relationship between metabolite ID ", temp_met_name, " and antioxidant capacity (Arugula)"), 
          x = "Peak intensity (log2 transformed)", 
          y = "ABTS Antioxidant capacity (µmol TE/g)") +
     ylim(0,180) +
