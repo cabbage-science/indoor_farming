@@ -378,3 +378,54 @@ ggsave("positive_and_optimal_metabolites_AC.png", plot = p, width = 10, height =
 
 # Calculate average R squared value from the model (k repeats and n folds)
 mean(modelLASSO$resample$Rsquared)
+
+
+###############################################
+#### COMPARING DIFFERENT PREDICTION MODELS ####
+###############################################
+
+# Set parameters for model training. Number = n-fold cross validation
+repeats = 20 ; number = 5
+# For randomness. Can add a "#" in front for reproducibility
+seeds <- sample(1:10000000, size = (repeats*number) + 1, replace = FALSE)
+
+# Defining parameters for model training 
+train_control <- trainControl(method = "repeatedcv", repeats=repeats,
+                              number = number,
+                              seeds = seeds)
+
+# Creating a merged dataframe for AC values and all metabolite peaks for all samples
+merged_df <- cbind(AC_merged,sig_metabolite_peaks)
+
+# Creating the LASSO model
+model_LASSO <- train(AC ~., data = merged_df,
+                    method = "lasso", 
+                    trControl = train_control)
+
+# Creating the PLS model
+model_PLS <- train(AC ~., data = merged_df,
+                    method = "pls", 
+                    trControl = train_control)
+
+# Creating the Bayesian Ridge Regression model (bridge) / Bayesian GLM model (bayesglm)
+model_bayesian <- train(AC ~., data = merged_df,
+                    method = "bayesglm", 
+                    trControl = train_control)
+
+# Creating the backward model
+model_leapBackward <- train(AC ~., data = merged_df,
+                    method = "leapBackward", 
+                    trControl = train_control)
+
+# Creating a list for caret input for extractPrediction function
+results <- resamples(list(PLS=model_PLS, LASSO=model_LASSO, Backward = model_leapBackward, Bayesian = model_bayesian))
+# To view R2 boxplots
+bwplot(results, xlim = c(0,1))
+bwplot(results)
+
+
+# Calculate average R squared value from the model (k repeats and n folds)
+mean(model_PLS$resample$Rsquared)
+mean(model_LASSO$resample$Rsquared)
+mean(model_bayesian$resample$Rsquared)
+mean(model_leapBackward$resample$Rsquared)
